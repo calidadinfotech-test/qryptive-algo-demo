@@ -1,10 +1,3 @@
-"""
-Educational RSA implementation from scratch.
-
-This file intentionally avoids third-party cryptography libraries and generates
-temporary keys at runtime. It is for testing and learning only. It does not
-include modern padding such as OAEP or PSS, so it is not safe for production.
-"""
 
 from __future__ import annotations
 
