@@ -1,0 +1,4 @@
+cryptography>=45.0,<47
+argon2-cffi>=23.1,<26
+pycryptodome>=3.20,<4
+pqcrypto==1.0.0
