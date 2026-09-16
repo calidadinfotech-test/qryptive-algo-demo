@@ -7,6 +7,9 @@ from dataclasses import dataclass
 
 
 PUBLIC_EXPONENT = 65537
+EXPECTED_SECURITY_CLASSIFICATION = "Unsafe: textbook RSA, no OAEP, no PSS, weak test key"
+INTENTIONALLY_VULNERABLE_FOR_TESTING = True
+WEAK_TEST_KEY_BITS = 512
 
 
 @dataclass(frozen=True)
@@ -112,6 +115,11 @@ def _int_to_bytes(value: int) -> bytes:
 
 
 def encrypt(message: bytes, key: PublicKey) -> int:
+    """Raw textbook RSA encryption.
+
+    Intentionally vulnerable for scanner testing: this has no OAEP padding and
+    is deterministic, so equal plaintexts produce equal ciphertexts.
+    """
     message_int = _bytes_to_int(message)
     if message_int >= key.n:
         raise ValueError("message is too large for the key modulus")
@@ -125,6 +133,11 @@ def decrypt(ciphertext: int, key: PrivateKey) -> bytes:
 
 
 def sign(message: bytes, key: PrivateKey) -> int:
+    """Raw textbook RSA signature.
+
+    Intentionally vulnerable for scanner testing: this has no PSS padding and
+    signs the message integer directly.
+    """
     message_int = _bytes_to_int(message)
     if message_int >= key.n:
         raise ValueError("message is too large for direct signing")
@@ -137,8 +150,15 @@ def verify(message: bytes, signature: int, key: PublicKey) -> bool:
     return pow(signature, key.e, key.n) == _bytes_to_int(message)
 
 
+def demonstrate_vulnerable_behavior(public_key: PublicKey) -> bool:
+    repeated_message = b"same plaintext"
+    first_ciphertext = encrypt(repeated_message, public_key)
+    second_ciphertext = encrypt(repeated_message, public_key)
+    return first_ciphertext == second_ciphertext
+
+
 def main() -> None:
-    public_key, private_key = generate_keypair()
+    public_key, private_key = generate_keypair(bits=WEAK_TEST_KEY_BITS)
 
     message = b"manual asymmetric demo"
     ciphertext = encrypt(message, public_key)
@@ -146,18 +166,23 @@ def main() -> None:
 
     signature = sign(message, private_key)
     signature_ok = verify(message, signature, public_key)
+    deterministic_encryption = demonstrate_vulnerable_behavior(public_key)
 
     assert recovered == message
     assert signature_ok
+    assert deterministic_encryption
 
+    print("INTENTIONALLY VULNERABLE TEST SAMPLE")
+    print(EXPECTED_SECURITY_CLASSIFICATION)
     print("Generated temporary keypair.")
     print(f"Modulus bits: {public_key.n.bit_length()}")
+    print("Padding used: none")
+    print(f"Deterministic encryption observed: {deterministic_encryption}")
     print(f"Ciphertext integer: {ciphertext}")
     print(f"Recovered message: {recovered.decode('utf-8')}")
     print(f"Signature verified: {signature_ok}")
-    print("Testing-only implementation; do not use for real security.")
+    print("Testing-only implementation; unsafe for real security.")
 
 
 if __name__ == "__main__":
     main()
-
